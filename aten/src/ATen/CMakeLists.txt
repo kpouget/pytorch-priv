@@ -113,6 +113,10 @@ file(GLOB_RECURSE native_mps_mm "native/mps/*.mm")
 file(GLOB_RECURSE native_mps_metal "native/mps/*.metal")
 file(GLOB_RECURSE native_mps_h "native/mps/*.h")
 
+# MPS remoting
+file(GLOB mps_remoting_frontend_cpp "mps/remoting_frontend/*.cpp")
+file(GLOB mps_remoting_backend_cpp "mps/remoting_backend/*.cpp")
+
 file(GLOB native_sparse_cpp "native/sparse/*.cpp")
 file(GLOB native_quantized_cpp
             "native/quantized/*.cpp"
@@ -566,15 +570,17 @@ if(USE_MPS)
 
     set(ATen_MPS_SRCS ${ATen_MPS_SRCS} ${mps_cpp} ${mps_h} ${native_mps_cpp} ${native_mps_h})
 
-    list(APPEND ATen_MPS_SRCS ${ops_generated_remoting_frontend})
-
-    if(USE_PYTORCH_MPS_REMOTING_FRONTEND)
-        list(APPEND ATen_MPS_SRCS ${ops_generated_remoting_frontend})
+    if(USE_MPS_REMOTING_FRONTEND)
+        # include the API remoting frontend generated files
+        list(APPEND ATen_MPS_SRCS ${ops_generated_remoting_frontend} ${mps_remoting_frontend_cpp})
     else()
-        if(USE_PYTORCH_MPS_REMOTING_BACKEND)
-            list(APPEND ATen_MPS_SRCS ${ops_generated_remoting_backend})
+        # include the objective-c files
+        list(APPEND ATen_MPS_SRCS ${mps_mm} ${native_mps_mm})
+
+        if(USE_MPS_REMOTING_BACKEND)
+            # include the API remoting backend generated files
+            list(APPEND ATen_MPS_SRCS ${ops_generated_remoting_backend} ${mps_remoting_backend_cpp})
         endif()
-        #list(APPEND ATen_MPS_SRCS ${mps_mm} ${native_mps_mm})
     endif()
 
     if(CAN_COMPILE_METAL)
@@ -595,11 +601,12 @@ if(USE_MPS)
                           OUTPUT metallib_dummy.cpp
                           COMMENT "Updating metallibs timestamp")
         add_custom_target(metallibs DEPENDS kernels_basic.metallib kernels_bfloat.metallib metallib_dummy.cpp)
-    else()
+    elseif(APPLE)
         file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/native/mps")
         foreach(SHADER ${native_mps_metal})
             cmake_path(GET SHADER STEM TGT_STEM)
             string(CONCAT SHADER_HDR_NAME  "${CMAKE_CURRENT_BINARY_DIR}" /native/mps/ ${TGT_STEM} "_metallib.h")
+            metal_to_metallib_h(${SHADER} ${SHADER_HDR_NAME})
         endforeach()
     endif()
 endif()

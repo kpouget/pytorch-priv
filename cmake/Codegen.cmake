@@ -184,6 +184,18 @@ if(INTERN_BUILD_ATEN_OPS)
     list(APPEND GEN_PER_OPERATOR_FLAG "--per-operator-headers")
   endif()
 
+  set(gen_types "headers" "sources" "declarations_yaml")
+
+  set(GEN_REMOTING_FLAG)
+  if(USE_MPS_REMOTING_FRONTEND)
+    list(APPEND gen_types "remoting_frontend")
+    list(APPEND GEN_REMOTING_FLAG "--remoting-frontend")
+  endif()
+  if(USE_MPS_REMOTING_BACKEND)
+    list(APPEND gen_types "remoting_backend")
+    list(APPEND GEN_REMOTING_FLAG "--remoting-backend")
+  endif()
+
   set(GEN_COMMAND
       "${Python_EXECUTABLE}" -m torchgen.gen
       --source-path ${CMAKE_CURRENT_LIST_DIR}/../aten/src/ATen
@@ -192,6 +204,7 @@ if(INTERN_BUILD_ATEN_OPS)
       ${GEN_ROCM_FLAG}
       ${GEN_MPS_FLAG}
       ${GEN_XPU_FLAG}
+      ${GEN_REMOTING_FLAG}
       ${CUSTOM_BUILD_FLAGS}
   )
 
@@ -199,7 +212,8 @@ if(INTERN_BUILD_ATEN_OPS)
   file(GLOB_RECURSE sources_templates "${CMAKE_CURRENT_LIST_DIR}/../aten/src/ATen/templates/*\.cpp")
   set(declarations_yaml_templates "")
 
-  foreach(gen_type "headers" "sources" "declarations_yaml" "remoting_frontend")
+  message(STATUS "Generate code for ${gen_types}")
+  foreach(gen_type ${gen_types})
     # The codegen outputs may change dynamically as PyTorch is
     # developed, but add_custom_command only supports dynamic inputs.
     #
@@ -208,15 +222,15 @@ if(INTERN_BUILD_ATEN_OPS)
     # ever changes then cmake will be re-run automatically because it
     # was included and so we get fully dynamic outputs.
 
-    if ("${gen_type}" STREQUAL "remoting_frontend")
+    if ("${gen_type}" STREQUAL "remoting_frontend" OR "${gen_type}" STREQUAL "remoting_backend")
       set("GEN_COMMAND_${gen_type}"
           "${Python_EXECUTABLE}" -m torchgen.gen
           --source-path ${CMAKE_CURRENT_LIST_DIR}/../aten/src/ATen
-          --install_dir ${CMAKE_BINARY_DIR}/aten/src/ATen/mps/remoting/frontend
+          --install_dir ${CMAKE_BINARY_DIR}/aten/src/ATen/mps/${gen_type}
           --generate ${gen_type}
           --output-dependencies ${CMAKE_BINARY_DIR}/aten/src/ATen/generated_${gen_type}.cmake
           --mps
-    )
+      )
     else()
       set("GEN_COMMAND_${gen_type}"
           ${GEN_COMMAND}
