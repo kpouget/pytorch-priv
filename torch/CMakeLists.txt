@@ -307,6 +307,10 @@ if(USE_COREML_DELEGATE)
   list(APPEND TORCH_PYTHON_SRCS ${TORCH_SRC_DIR}/csrc/jit/backends/coreml/cpp/preprocess.cpp)
 endif()
 
+message(STATUS "Python test sources: ")
+foreach(tmp ${TORCH_PYTHON_SRCS})
+  message(STATUS "  " ${tmp})
+endforeach()
 
 add_library(torch_python SHARED ${TORCH_PYTHON_SRCS})
 torch_compile_options(torch_python)  # see cmake/public/utils.cmake
