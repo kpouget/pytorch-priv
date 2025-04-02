@@ -116,54 +116,15 @@ if(CAFFE2_ALLOWLISTED_FILES)
   caffe2_do_allowlist(Caffe2_HIP_SRCS CAFFE2_ALLOWLISTED_FILES)
 endif()
 
-if(PRINT_CMAKE_DEBUG_INFO)
-  message(STATUS "CPU sources: ")
-  foreach(tmp ${Caffe2_CPU_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
+if(true)
+  # message(STATUS "CPU sources: ")
+  # foreach(tmp ${Caffe2_CPU_SRCS})
+  #   message(STATUS "  " ${tmp})
+  # endforeach()
 
-  message(STATUS "GPU sources: (for torch_cuda_cpp)")
-  foreach(tmp ${Caffe2_GPU_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "GPU sources: (for torch_cuda_cu)")
-  foreach(tmp ${Caffe2_GPU_CU_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "torch_cuda_cu GPU sources (w/ sort by key): ")
-  foreach(tmp ${Caffe2_GPU_CU_SRCS_W_SORT_BY_KEY})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "torch_cuda_cpp GPU sources (w/ sort by key): ")
-  foreach(tmp ${Caffe2_GPU_SRCS_W_SORT_BY_KEY})
-    message(STATUS "  " ${tmp})
-  endforeach()
 
   message(STATUS "CPU include: ")
   foreach(tmp ${Caffe2_CPU_INCLUDE})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "GPU include: ")
-  foreach(tmp ${Caffe2_GPU_INCLUDE})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "CPU test sources: ")
-  foreach(tmp ${Caffe2_CPU_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "GPU test sources: ")
-  foreach(tmp ${Caffe2_GPU_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "HIP sources: ")
-  foreach(tmp ${Caffe2_HIP_SRCS})
     message(STATUS "  " ${tmp})
   endforeach()
 
@@ -172,45 +133,10 @@ if(PRINT_CMAKE_DEBUG_INFO)
     message(STATUS "  " ${tmp})
   endforeach()
 
-  message(STATUS "XPU sources: ")
-  foreach(tmp ${Caffe2_XPU_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "HIP test sources: ")
-  foreach(tmp ${Caffe2_HIP_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "ATen CPU test sources: ")
-  foreach(tmp ${ATen_CPU_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "ATen MPS test sources: ")
-  foreach(tmp ${ATen_MPS_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "ATen CUDA test sources: ")
-  foreach(tmp ${ATen_CUDA_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "ATen HIP test sources: ")
-  foreach(tmp ${ATen_HIP_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "ATen XPU test sources: ")
-  foreach(tmp ${ATen_XPU_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
-
-  message(STATUS "ATen Vulkan test sources: ")
-  foreach(tmp ${ATen_VULKAN_TEST_SRCS})
-    message(STATUS "  " ${tmp})
-  endforeach()
+  # message(STATUS "ATen Vulkan test sources: ")
+  # foreach(tmp ${ATen_VULKAN_TEST_SRCS})
+  #   message(STATUS "  " ${tmp})
+  # endforeach()
 
 endif()
 
@@ -848,7 +774,7 @@ set_property(SOURCE ${ATen_CORE_SRCS} APPEND
 set_property(SOURCE ${ATen_ATTENTION_KERNEL_SRCS} APPEND
     PROPERTY COMPILE_DEFINITIONS "TORCH_ASSERT_NO_OPERATORS")
 
-if(USE_MPS OR USE_PYTORCH_METAL)
+if(APPLE AND (USE_MPS OR USE_PYTORCH_METAL))
   enable_language(OBJC OBJCXX)
 endif()
 

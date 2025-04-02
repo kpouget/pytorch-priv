@@ -272,6 +272,17 @@ option(USE_MAGMA "Use MAGMA" ON)
 option(USE_PYTORCH_METAL "Use Metal for PyTorch iOS build" OFF)
 option(USE_PYTORCH_METAL_EXPORT "Export Metal models on MacOSX desktop" OFF)
 option(USE_NATIVE_ARCH "Use -march=native" OFF)
+
+option(USE_MPS_REMOTING_FRONTEND "Build MPS API Remoting frontend stubs" OFF)
+option(USE_MPS_REMOTING_BACKEND "Build MPS API Remoting backend library" OFF)
+
+if(USE_MPS_REMOTING_FRONTEND)
+  if(MPS_FOUND)
+    message(FATAL_ERROR "USE_MPS_REMOTING_FRONTEND shouldn't be used in an environment where MPS_FOUND=${MPS_FOUND}.")
+  endif()
+  set(MPS_FOUND ON)
+endif()
+
 cmake_dependent_option(USE_MPS "Use MPS for macOS build" ON "MPS_FOUND" OFF)
 cmake_dependent_option(USE_NCCL "Use NCCL" ON
                        "USE_CUDA OR USE_ROCM;UNIX;NOT APPLE" OFF)
@@ -444,6 +455,25 @@ if(USE_GLOO_WITH_OPENSSL)
   set(USE_TCP_OPENSSL_LOAD
       ON
       CACHE STRING "")
+endif()
+
+# MPS API Remoting checks
+
+if(USE_MPS_REMOTING_FRONTEND)
+  if(NOT USE_MPS)
+    message(FATAL_ERROR "USE_MPS_REMOTING_FRONTEND cannot be used without USE_MPS (${USE_MPS}).")
+  endif()
+  if(USE_MPS_REMOTING_BACKEND)
+    message(FATAL_ERROR "USE_MPS_REMOTING_FRONTEND and USE_MPS_REMOTING_BACKEND cannot be used simultaneously.")
+  endif()
+
+  set(MPS_FOUND ON)
+endif()
+
+if(USE_MPS_REMOTING_BACKEND)
+  if(NOT USE_MPS)
+    message(FATAL_ERROR "USE_MPS_REMOTING_BACKEND cannot be used without USE_MPS.")
+  endif()
 endif()
 
 # Linux distributions do not want too many embedded sources, in that sense we
@@ -1192,6 +1222,10 @@ if(APPLE)
   endif()
   append_cxx_flag_if_supported("-Wno-unused-private-field" CMAKE_CXX_FLAGS)
   append_cxx_flag_if_supported("-Wno-missing-braces" CMAKE_CXX_FLAGS)
+else()
+  if(USE_MPS)
+    string(APPEND CMAKE_CXX_FLAGS " -DUSE_MPS")
+  endif()
 endif()
 
 if(USE_XPU)
