@@ -9,6 +9,7 @@ from torchgen.dest.native_functions import (
 )
 from torchgen.dest.remoting_functions import (
     compute_native_function_remoting_frontend as compute_native_function_remoting_frontend,
+    compute_native_function_remoting_backend as compute_native_function_remoting_backend,
 )
 from torchgen.dest.register_dispatch_key import (
     gen_registration_headers as gen_registration_headers,

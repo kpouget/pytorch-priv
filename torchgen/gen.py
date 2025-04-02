@@ -1543,7 +1543,7 @@ def get_native_function_declarations_from_ns_grouped_kernels(
     return declarations
 
 # Return native function remoting grouped by their namespaces.
-def get_native_function_remoting_frontend(
+def get_native_function_remoting(
     *,
     grouped_native_functions: Sequence[NativeFunction | NativeFunctionsGroup],
     backend_indices: dict[DispatchKey, BackendIndex],
@@ -2131,6 +2131,7 @@ def gen_remoting(
     device_fms: dict[str, FileManager],
     dispatch_keys: Sequence[DispatchKey],
     functions_keys: set[DispatchKey],
+    frontend=False,
 ) -> None:
     # For CMake builds, split operator declarations into separate headers in
     # the ATen/ops folder to split up header dependencies
@@ -2167,15 +2168,19 @@ def gen_remoting(
                 },
             )
 
-        declarations = get_native_function_remoting_frontend(
+
+        declarations = get_native_function_remoting(
             grouped_native_functions=grouped_functions,
             backend_indices=backend_indices,
-            native_function_decl_gen=dest.compute_native_function_remoting_frontend,
+            native_function_decl_gen=(dest.compute_native_function_remoting_frontend \
+                                      if frontend \
+                                      else dest.compute_native_function_remoting_backend),
         )
 
+        what = "frontend" if frontend else "backend"
         ops_fm.write_with_template(
-            f"{name}_remoting_frontend.cpp",
-            "RemotingFrontendFunction.cpp",
+            f"{name}_remoting_{what}.cpp",
+            f"Remoting{what.title()}Function.cpp",
             lambda: {
                 "extra_includes": (
                     f"#include <ATen/ops/{name}_meta.h>" if is_structured else []
@@ -2925,6 +2930,16 @@ def main() -> None:
         help="Generate MPS registration code when set",
     )
     parser.add_argument(
+        "--remoting-frontend",
+        action="store_true",
+        help="Running code generation for the remoting frontend library",
+    )
+    parser.add_argument(
+        "--remoting-backend",
+        action="store_true",
+        help="Running code generation for the remoting backend library",
+    )
+    parser.add_argument(
         "--xpu",
         action="store_true",
         help="Generate XPU registration code when set",
@@ -2980,7 +2995,7 @@ def main() -> None:
         "--generate",
         type=str,
         nargs="*",
-        choices=["headers", "sources", "declarations_yaml", "remoting_frontend"],
+        choices=["headers", "sources", "declarations_yaml", "remoting_frontend", "remoting_backend"],
         default=["headers", "sources", "declarations_yaml"],
         help="Generate only a subset of files",
     )
@@ -3127,11 +3142,13 @@ def main() -> None:
                 functions_keys.add(dp_key)
 
     if "sources" in options.generate:
-        # workaround: do not generate `RegisterMPS.cpp` when compiling the CPU sources
-        # this makes many 'undefined reference to function ...mps...'
-        # should be better to not pass the --mps flag when running this command.
-        ignore_keys.add(DispatchKey.MPS)
-        del dispatch_keys[dispatch_keys.index(DispatchKey.MPS)]
+        if options.remoting_frontend:
+            # workaround: do not generate `RegisterMPS.cpp` when compiling the CPU sources
+            # this makes many 'undefined reference to function ...mps...'
+            # should be better to not pass the --mps flag when running this command.
+
+            ignore_keys.add(DispatchKey.MPS)
+            del dispatch_keys[dispatch_keys.index(DispatchKey.MPS)]
 
         gen_source_files(
             native_functions=native_functions,
@@ -3176,7 +3193,7 @@ def main() -> None:
             per_operator_headers=options.per_operator_headers,
         )
 
-    if "remoting_frontend" in options.generate:
+    if "remoting_frontend" in options.generate or "remoting_backend" in options.generate:
         gen_remoting(
             native_functions=native_functions,
             grouped_native_functions=grouped_native_functions,
@@ -3188,6 +3205,7 @@ def main() -> None:
             device_fms=device_fms,
             dispatch_keys=dispatch_keys,
             functions_keys=functions_keys,
+            frontend=("remoting_frontend" in options.generate),
         )
 
     if "declarations_yaml" in options.generate:

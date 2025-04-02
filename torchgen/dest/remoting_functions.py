@@ -171,7 +171,6 @@ def gen_unstructured_remoting_frontend(f: NativeFunction, backend_index: Backend
 
     return code
 
-
 @with_native_function_and_index
 def gen_structured_remoting_frontend(g: NativeFunctionsGroup, backend_index: BackendIndex) -> list[str]:
     meta_name = meta.name(g)
@@ -190,6 +189,63 @@ struct {prefix}structured_{metadata.kernel} : public at::meta::structured_{meta_
 """
     ]
 
+
+# ---- #
+
+@with_native_function_and_index
+def gen_unstructured_remoting_backend(f: NativeFunction, backend_index: BackendIndex) -> str | None:
+    sig = kernel_signature(f, backend_index)
+    metadata = backend_index.get_kernel(f)
+    if metadata is None:
+        return None
+    if "legacy::" in metadata.kernel:
+        return None
+
+    if "_mps" not in metadata.kernel:
+        return None
+
+    if metadata.kernel in ("_mps_convolution_out_symint", "_mps_convolution_transpose_out_symint", "lstm_mps_backward_out", "_lstm_mps_out"):
+        return
+
+    prefix = "static" if backend_index.external else "TORCH_API"
+
+    ret_type = sig.returns_type().cpp_type()
+
+    prepare_return_statements, return_value = get_return_value(sig.func.returns)
+
+    code = f"""\
+/* place holder for
+| {prefix} {sig.decl(name=metadata.kernel)} {{
+|    {';\n|    '.join(prepare_return_statements)};
+|
+|    return {return_value};
+| }}
+*/
+    """
+    #print(code)
+
+    return code
+
+
+@with_native_function_and_index
+def gen_structured_remoting_backend(g: NativeFunctionsGroup, backend_index: BackendIndex) -> list[str]:
+    meta_name = meta.name(g)
+    out_args = structured.impl_arguments(g)
+    metadata = backend_index.get_kernel(g)
+    if metadata is None:
+        return []
+    prefix = torch_api_key_word_prefix(backend_index)
+    return [
+        f"""\
+/* place holder for
+| struct {prefix}structured_{metadata.kernel} : public at::meta::structured_{meta_name} {{
+|     void impl({', '.join(a.decl() for a in out_args)}) {{
+|         return;
+|     }}
+| }};
+| */
+"""
+    ]
 
 # Generates NativeFunctions.h, a list of forward declarations of all
 # actual kernel definitions we keep in aten/src/ATen/native/
@@ -214,4 +270,30 @@ def compute_native_function_remoting_frontend(
             )
     else:
         x = gen_unstructured_remoting_frontend(g, backend_index)
+        return [] if x is None else [x]
+
+
+# Generates NativeFunctions.h, a list of forward declarations of all
+# actual kernel definitions we keep in aten/src/ATen/native/
+@with_native_function_and_index
+def compute_native_function_remoting_backend(
+    g: NativeFunctionsGroup | NativeFunction, backend_index: BackendIndex
+) -> list[str]:
+    #raise Error("hell")
+    metadata = backend_index.get_kernel(g)
+    if isinstance(g, NativeFunctionsGroup):
+        if metadata is not None and metadata.structured:
+            if backend_index.external:
+                # Structured hasn't been tested with external backends yet.
+                raise AssertionError(
+                    "Structured external backend functions are not implemented yet."
+                )
+            else:
+                return gen_structured_remoting_backend(g, backend_index)
+        else:
+            return list(
+                mapMaybe(lambda f: gen_unstructured_remoting_backend(f, backend_index), g.functions())
+            )
+    else:
+        x = gen_unstructured_remoting_backend(g, backend_index)
         return [] if x is None else [x]
