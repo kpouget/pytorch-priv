@@ -184,7 +184,7 @@ if(USE_CUSPARSELT)
 endif()
 
 if(USE_MPS)
-    list(APPEND TORCH_PYTHON_SRCS ${MPS_PYTHON_SRCS})
+    list(APPEND TORCH_PYTHON_SRCS ${TORCH_SRC_DIR}/csrc/mps/Module.cpp ${TORCH_SRC_DIR}/../aten/src/ATen/mps/remoting_frontend/python/python.cpp)
 endif()
 
 if(USE_VALGRIND AND NOT WIN32)
